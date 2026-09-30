@@ -12,7 +12,10 @@ function openBrowser() {
 }
 const { runCheck, listProfileProjects, readHistory, readOwners, readDetails, readProfileHistory, loadProjects, ROOT, LAST } = require('./engine');
 const { projectList, buildData } = require('./dados');
-const { publicar } = require('./publicar');
+const { publicar, sincronizar, atualizar } = require('./publicar');
+// operações de git uma de cada vez (evita duas mexendo no repositório ao mesmo tempo)
+let gitFila = Promise.resolve();
+const emFila = (fn) => (gitFila = gitFila.then(fn, fn));
 
 const PORT = Number(process.env.PORT) || 4747;
 const CONFIG = path.join(ROOT, 'config.json');
@@ -36,17 +39,18 @@ function startRun() {
     running: true, done: 0, total: loadProjects().length, current: 'Abrindo o Chrome anônimo', recent: [],
     startedAt: Date.now(), expectedMs: expectedMs(), error: null, finishedAt: null, summary: null,
   };
-  runCheck({
+  // antes de verificar, traz o que a nuvem já publicou (a verificação continua mesmo se isso falhar)
+  emFila(() => sincronizar()).catch(() => {}).then(() => runCheck({
     showWindow: !!config.mostrarNavegador,
     onProgress: ({ done, total, current, result }) => {
       Object.assign(job, { done, total, current });
       if (result) job.recent = [{ name: result.name, status: result.status, views: result.views }, ...job.recent].slice(0, 4);
     },
-  })
+  }))
     .then(({ summary }) => {
       Object.assign(job, { running: false, summary, finishedAt: Date.now() });
       // atualiza a versão online (Vercel); se falhar, só registra — a verificação já terminou
-      publicar().then((r) => console.log(`Versão online: ${r.motivo}`)).catch((e) => console.log(`Versão online: não publicada (${e.message})`));
+      emFila(() => publicar()).then((r) => console.log(`Versão online: ${r.motivo}`)).catch((e) => console.log(`Versão online: não publicada (${e.message})`));
     })
     .catch((e) => Object.assign(job, { running: false, error: e.message, finishedAt: Date.now() }));
 }
@@ -189,4 +193,8 @@ http.createServer(async (req, res) => {
   .listen(PORT, '127.0.0.1', () => {
     console.log(`Behance Monitor em http://localhost:${PORT}`);
     openBrowser();
+    // mantém esta pasta em dia com o GitHub (verificações da nuvem) e envia marcos/metas/projetos editados aqui
+    const manterEmDia = () => { if (!job.running && !syncing) emFila(() => atualizar()).then((r) => r && console.log(`GitHub: ${r.motivo}`)).catch(() => {}); };
+    manterEmDia();
+    setInterval(manterEmDia, 10 * 60 * 1000);
   });

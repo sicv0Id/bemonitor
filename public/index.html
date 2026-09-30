@@ -848,7 +848,7 @@ footer.foot { display: flex; justify-content: space-between; gap: 12px; flex-wra
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
 /* ---------- versão online (só para ver): some o que só funciona no computador ---------- */
-html.readonly .run-row, html.readonly [data-open-projects], html.readonly [data-open-marks], html.readonly [data-open-goal],
+html.readonly:not(.cloud-run) .run-row, html.readonly [data-open-projects], html.readonly [data-open-marks], html.readonly [data-open-goal],
 html.readonly .cd-add, html.readonly #ajustes, html.readonly .side-nav .nav-end { display: none !important; }
 
 /* ---------- efeitos ligados à rolagem (Chrome e afins) ---------- */
@@ -3020,6 +3020,7 @@ function setLabel(text) {
 }
 const setRunState = (s) => { $('#run').dataset.state = s; };
 function runSubIdle() {
+  if (state.readonly) { $('#runSub').textContent = 'roda na nuvem do GitHub · leva uns 2 min'; return; }
   const L = state.raw?.last, n = state.raw?.projects ?? state.full?.projects.length ?? 0;
   const secs = L ? Math.max(1, Math.round((new Date(L.fim) - new Date(L.inicio)) / 1000)) : null;
   $('#runSub').textContent = `${n} ${n === 1 ? 'projeto' : 'projetos'}${secs ? ` · a última levou ${fmtSecs(secs)}` : ''}`;
@@ -3147,6 +3148,8 @@ async function load() {
     raw = await (await fetch(`dados.json?t=${Date.now()}`, { cache: 'no-store' })).json(); state.readonly = true;
   }
   document.documentElement.classList.toggle('readonly', state.readonly);
+  // na versão online, a verificação roda na nuvem do GitHub (se o endereço dela foi publicado)
+  document.documentElement.classList.toggle('cloud-run', state.readonly && !!raw.acoes?.verificar);
   state.raw = raw;
   state.full = buildModel(raw.rows, raw.projectList || []);
   applyProfile();
@@ -3461,7 +3464,35 @@ function setupNav() {
 }
 
 // ---------- eventos gerais ----------
+// Versão online: abre a verificação no GitHub (tocar em "Run workflow") e espera o dados.json novo chegar.
+let cloudTimer = 0;
+function cloudRun() {
+  const since = state.raw.publicadoEm, t0 = Date.now();
+  window.open(state.raw.acoes.verificar, '_blank', 'noopener');
+  clearTimeout(runReset); clearInterval(cloudTimer);
+  setRunState('running'); setLabel('Aguardando a nuvem…');
+  $('#runRing').style.strokeDashoffset = RING_C; $('#runPct').textContent = '···';
+  $('#runSub').textContent = 'no GitHub, toque em "Run workflow"';
+  const tick = async () => {
+    const s = Math.round((Date.now() - t0) / 1000);
+    if (s > 20) $('#runSub').textContent = `esperando os números novos · ${fmtSecs(s)}`;
+    try {
+      const d = await (await fetch(`dados.json?t=${Date.now()}`, { cache: 'no-store' })).json();
+      if (d.publicadoEm && d.publicadoEm !== since) {
+        clearInterval(cloudTimer);
+        state.animateChart = true; state.animateScatter = true;
+        await load();
+        runOutcome('success', 'Dados atualizados', d.last ? `${d.last.noAr} de ${d.last.total} no ar` : 'verificação concluída');
+        uWave(); toast('Verificação concluída na nuvem');
+        return;
+      }
+    } catch {}
+    if (Date.now() - t0 > 12 * 60 * 1000) { clearInterval(cloudTimer); runOutcome('error', 'Ainda sem números novos', 'veja no GitHub se a verificação rodou'); }
+  };
+  cloudTimer = setInterval(tick, 15000);
+}
 $('#run').addEventListener('click', async () => {
+  if (state.readonly) { if (state.raw?.acoes?.verificar) cloudRun(); return; }
   renderJob({ running: true, done: 0, total: state.raw?.projects || state.full?.projects.length || 1, recent: [], elapsedMs: 0, expectedMs: 35000 });
   await fetch('/api/run', { method: 'POST' });
   poll();

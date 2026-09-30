@@ -12,10 +12,12 @@ const LAST = path.join(ROOT, 'ultima-verificacao.json');
 const HEADER = ['data', 'id_galeria', 'projeto', 'status', 'curtidas', 'visualizacoes', 'comentarios', 'url'];
 
 const CHROME_PATHS = [
+  process.env.CHROME_PATH || '', // nuvem (GitHub Actions) ou outro computador
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
   'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
   path.join(process.env.LOCALAPPDATA || '', 'Google\\Chrome\\Application\\chrome.exe'),
-];
+  '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium-browser', '/usr/bin/chromium',
+].filter(Boolean);
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const today = () => {
@@ -156,6 +158,7 @@ async function launchChrome(showWindow) {
   const args = [
     `--user-data-dir=${profile}`, '--remote-debugging-port=0',
     '--no-first-run', '--no-default-browser-check', '--disable-extensions', '--disable-sync',
+    ...(process.platform === 'win32' ? [] : ['--no-sandbox', '--disable-dev-shm-usage']), // servidores Linux da nuvem
     '--lang=pt-BR', '--window-size=1280,900', '--blink-settings=imagesEnabled=false',
     ...(showWindow ? [] : ['--headless=new']),
     'about:blank',

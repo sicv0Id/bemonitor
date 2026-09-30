@@ -1,0 +1,34 @@
+# Verificação do Behance na nuvem do GitHub — roda com o computador desligado.
+#  - todo dia às 12:00 (horário de Brasília; o GitHub às vezes atrasa alguns minutos)
+#  - quando pedido: botão "Executar verificação" do site (iPhone/celular) → "Run workflow"
+# Grava os números no repositório; a Vercel republica o site sozinha.
+name: Verificação do Behance
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 15 * * *'
+  push:
+    branches: [main]
+    paths: ['.github/workflows/verificar.yml'] # roda uma vez quando este arquivo muda (para testar)
+permissions:
+  contents: write
+concurrency:
+  group: verificacao
+  cancel-in-progress: false
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Verificar projetos e publicar
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+          TZ: America/Sao_Paulo
+        run: |
+          git config user.name "Behance Monitor (nuvem)"
+          git config user.email "behance-monitor@users.noreply.github.com"
+          node check.js > /dev/null
