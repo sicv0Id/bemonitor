@@ -11,6 +11,8 @@ function openBrowser() {
   spawn('rundll32', ['url.dll,FileProtocolHandler', `http://localhost:${PORT}`], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
 }
 const { runCheck, listProfileProjects, readHistory, readOwners, readDetails, readProfileHistory, loadProjects, ROOT, LAST } = require('./engine');
+const { projectList, buildData } = require('./dados');
+const { publicar } = require('./publicar');
 
 const PORT = Number(process.env.PORT) || 4747;
 const CONFIG = path.join(ROOT, 'config.json');
@@ -41,21 +43,18 @@ function startRun() {
       if (result) job.recent = [{ name: result.name, status: result.status, views: result.views }, ...job.recent].slice(0, 4);
     },
   })
-    .then(({ summary }) => Object.assign(job, { running: false, summary, finishedAt: Date.now() }))
+    .then(({ summary }) => {
+      Object.assign(job, { running: false, summary, finishedAt: Date.now() });
+      // atualiza a versão online (Vercel); se falhar, só registra — a verificação já terminou
+      publicar().then((r) => console.log(`Versão online: ${r.motivo}`)).catch((e) => console.log(`Versão online: não publicada (${e.message})`));
+    })
     .catch((e) => Object.assign(job, { running: false, error: e.message, finishedAt: Date.now() }));
 }
 
 // ---------- lista de projetos (projetos.json) ----------
 const PROJECTS = path.join(ROOT, 'projetos.json');
 const galleryId = (u) => (String(u).match(/gallery\/(\d+)/) || [])[1] || '';
-const slugName = (u) => decodeURIComponent((String(u).split('/').pop() || '').replace(/-/g, ' ')) || `Projeto ${galleryId(u)}`;
-
-function projectList() {
-  const names = new Map();
-  for (const r of readHistory()) if (r.status === 'NO AR' || !names.has(r.id_galeria)) names.set(r.id_galeria, r.projeto);
-  const owners = readOwners().projetos;
-  return loadProjects().map((u) => ({ id: galleryId(u), url: u, name: names.get(galleryId(u)) || slugName(u), owners: owners[galleryId(u)] || [] }));
-}
+// projectList() vem de dados.js (a mesma montagem usada na versão online)
 
 // ---------- marcos do gráfico e metas ----------
 const MARKS = path.join(ROOT, 'marcos.json');
@@ -93,9 +92,7 @@ http.createServer(async (req, res) => {
   try {
     if (req.method === 'GET' && url.pathname === '/') return send(res, 200, fs.readFileSync(path.join(ROOT, 'public', 'index.html')), 'text/html; charset=utf-8');
     if (req.method === 'GET' && url.pathname === '/api/data') {
-      const list = projectList();
-      return send(res, 200, { rows: readHistory(), last: readJson(LAST, null), projects: list.length, projectList: list, profiles: readOwners().perfis,
-        details: readDetails(), profileRows: readProfileHistory(), marks: readJson(MARKS, []), goals: readJson(GOALS, {}), config, syncing, job: { ...job, elapsedMs: job.running ? Date.now() - job.startedAt : 0 } });
+      return send(res, 200, buildData({ config, syncing, job: { ...job, elapsedMs: job.running ? Date.now() - job.startedAt : 0 } }));
     }
     if (req.method === 'GET' && url.pathname === '/api/projects') return send(res, 200, projectList());
     if (req.method === 'POST' && url.pathname === '/api/projects') {

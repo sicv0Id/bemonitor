@@ -1,18 +1,14 @@
 {
   "data": "2026-09-30",
-  "inicio": "2026-09-30T13:46:22.945Z",
-  "fim": "2026-09-30T13:48:29.955Z",
+  "inicio": "2026-09-30T16:54:11.758Z",
+  "fim": "2026-09-30T16:54:55.647Z",
   "total": 52,
-  "noAr": 47,
+  "noAr": 50,
   "foraDoAr": [
     "Campanha Mustang Meeting",
     "Campanha Ofertas de Carnaval Metronorte"
   ],
-  "erros": [
-    "Medical Equipment Source Brand Refresh",
-    "Logofolio Colecoes Maria Dolores",
-    "Logofolio"
-  ],
+  "erros": [],
   "novosDestaques": [],
   "perfis": [
     {
