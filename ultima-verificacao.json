@@ -1,0 +1,27 @@
+{
+  "data": "2026-09-30",
+  "inicio": "2026-09-30T13:46:22.945Z",
+  "fim": "2026-09-30T13:48:29.955Z",
+  "total": 52,
+  "noAr": 47,
+  "foraDoAr": [
+    "Campanha Mustang Meeting",
+    "Campanha Ofertas de Carnaval Metronorte"
+  ],
+  "erros": [
+    "Medical Equipment Source Brand Refresh",
+    "Logofolio Colecoes Maria Dolores",
+    "Logofolio"
+  ],
+  "novosDestaques": [],
+  "perfis": [
+    {
+      "perfil": "marcelotrevizan",
+      "seguidores": 1128
+    },
+    {
+      "perfil": "jesskkuhn",
+      "seguidores": 428
+    }
+  ]
+}
