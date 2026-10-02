@@ -1,17 +1,14 @@
 {
-  "data": "2026-10-01",
-  "inicio": "2026-10-01T15:54:05.544Z",
-  "fim": "2026-10-01T15:56:07.076Z",
+  "data": "2026-10-02",
+  "inicio": "2026-10-02T13:34:05.597Z",
+  "fim": "2026-10-02T13:34:45.227Z",
   "total": 52,
-  "noAr": 48,
+  "noAr": 50,
   "foraDoAr": [
     "Campanha Mustang Meeting",
     "Campanha Ofertas de Carnaval Metronorte"
   ],
-  "erros": [
-    "Medical Equipment Source Brand Refresh",
-    "Site Cafs Capal"
-  ],
+  "erros": [],
   "novosDestaques": [],
   "perfis": [
     {
